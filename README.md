@@ -68,6 +68,8 @@
 
 [Отправить донат](https://t.tb.ru/pm_short/3CFjjbcH8x0)
 
+<!-- sponsors: src/Filee.App/Assets/Sponsors/sponsors.json -->
+
 ## Лицензия
 
 Программа распространяется по лицензии [MIT](LICENSE); сторонние компоненты — в [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
