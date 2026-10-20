@@ -44,12 +44,6 @@
             <Button Classes="ghost" Padding="0" Click="OnOpenLink" Tag="tel:+79777700099">
               <TextBlock Text="+7 (977) 77-000-99" Foreground="{DynamicResource AccentBrush}" />
             </Button>
-            <Button Classes="ghost" Padding="0" Click="OnOpenLink" Tag="https://github.com/KnifeLemon/Filee" Margin="0,4,0,0">
-              <StackPanel Orientation="Horizontal" Spacing="6">
-                <PathIcon Width="13" Height="13" Data="{StaticResource Icon.Link}" Foreground="{DynamicResource AccentBrush}" />
-                <TextBlock Text="{DynamicResource about.build_upstream}" Foreground="{DynamicResource AccentBrush}" />
-              </StackPanel>
-            </Button>
           </StackPanel>
         </WrapPanel>
       </StackPanel>

@@ -1,12 +1,15 @@
 // Update check against GitHub Releases. When a newer version is out the app says so (sidebar, notice, tray). In an
 // installed copy "Update" downloads the new installer, checks it against the release's SHA256SUMS file and runs it;
-// Setup closes Filee, updates it in place (settings are kept) and starts it again. A portable copy, a copy run from
-// source, or a failed download opens a download page instead. The check works in every build.
+// Setup closes Filee, updates it in place (settings are kept) and starts it again. On macOS a published Filee.app in
+// a folder the user can write downloads the package for its processor, checks it the same way, and a small script
+// swaps the bundle once Filee has quit and starts the new one. A portable copy, a copy run from source, or a failed
+// download opens a download page instead. The check works in every build.
 
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Net.Http.Headers;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text.Json;
 using Avalonia.Threading;
@@ -68,7 +71,7 @@ public sealed partial class UpdateService : ObservableObject
     /// <summary>GitHub repository from Directory.Build.props (FileeRepositoryUrl).</summary>
     public static string RepositoryUrl =>
         typeof(UpdateService).Assembly.GetCustomAttributes<AssemblyMetadataAttribute>()
-            .FirstOrDefault(a => a.Key == "RepositoryUrl")?.Value ?? "https://github.com/KnifeLemon/Filee";
+            .FirstOrDefault(a => a.Key == "RepositoryUrl")?.Value ?? "https://github.com/avet-digital/filee-ru";
 
     public static string CurrentVersion =>
         typeof(UpdateService).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion.Split('+')[0]
@@ -80,9 +83,6 @@ public sealed partial class UpdateService : ObservableObject
     /// <summary>Release page with every file, including the portable zip.</summary>
     public static string LatestReleaseUrl => RepositoryUrl.TrimEnd('/') + "/releases/latest";
 
-    /// <summary>The website: one big download button, friendlier than the GitHub release page.</summary>
-    public const string WebsiteUrl = "https://filee.sh/";
-
     /// <summary>
     /// True when this copy was installed by Setup (Inno Setup puts its uninstaller next to Filee.exe). Only then can
     /// the new installer update it in place; the portable zip and a copy run from source have no uninstaller.
@@ -90,8 +90,24 @@ public sealed partial class UpdateService : ObservableObject
     public static bool IsInstalled { get; } = OperatingSystem.IsWindows()
                                               && File.Exists(Path.Combine(AppContext.BaseDirectory, "unins000.exe"));
 
+    /// <summary>The Filee.app this copy runs from on macOS (".../Filee.app"), or null elsewhere.</summary>
+    public static string? MacBundlePath { get; } = FindMacBundle();
+
+    /// <summary>
+    /// True for a published Filee.app whose folder the user can write (~/Applications, or /Applications for an
+    /// administrator): only then can it replace itself with the new version.
+    /// </summary>
+    public static bool IsMacBundle { get; } = OperatingSystem.IsMacOS() && IsReleaseBuild && MacBundlePath is { } app
+                                              && CanWrite(Path.GetDirectoryName(app)!);
+
     /// <summary>Whether <see cref="UpdateAsync"/> installs by itself (<see cref="IsInstalled"/>; tests set it).</summary>
-    internal bool InstallsItself { get; init; } = IsInstalled;
+    internal bool InstallsItself { get; init; } = IsInstalled || IsMacBundle;
+
+    /// <summary>The release package this platform updates from: the Windows installer, or the macOS package for this processor.</summary>
+    internal static string PackageSuffix =>
+        OperatingSystem.IsMacOS()
+            ? $"-osx-{(RuntimeInformation.ProcessArchitecture == Architecture.Arm64 ? "arm64" : "x64")}.tar.gz"
+            : "-win-Setup.exe";
 
     /// <summary>The newer version found by the last check (e.g. "1.0.2"), or null when up to date / unknown.</summary>
     [ObservableProperty]
@@ -273,6 +289,12 @@ public sealed partial class UpdateService : ObservableObject
             return;
         }
 
+        if (OperatingSystem.IsMacOS())
+        {
+            StartMacUpdate(installer);
+            return;
+        }
+
         Process? setup;
         try
         {
@@ -301,6 +323,73 @@ public sealed partial class UpdateService : ObservableObject
             await setup.WaitForExitAsync();
         _log.LogInformation("Installer ended with exit code {Code}", setup.ExitCode);
         Step = setup.ExitCode == 0 ? UpdateStep.Idle : UpdateStep.Cancelled;
+    }
+
+    /// <summary>
+    /// Replaces Filee.app once Filee has quit: unpacks the verified package, checks the new bundle's signature, waits
+    /// for this process to end, swaps the bundles (the old one goes back if copying fails) and starts Filee again.
+    /// The script runs on its own, so Filee quits right after starting it.
+    /// </summary>
+    private void StartMacUpdate(string package)
+    {
+        const string script = """
+            #!/bin/sh
+            package=$1; app=$2; pid=$3
+            case "$app" in */Filee.app) ;; *) exit 1 ;; esac
+            work=$(mktemp -d "${TMPDIR:-/tmp}/filee-update.XXXXXX") || exit 1
+            exec >>"$work/update.log" 2>&1
+            /usr/bin/tar -xzf "$package" -C "$work" || exit 1
+            new=$(find "$work" -maxdepth 2 -type d -name Filee.app | head -n 1)
+            [ -n "$new" ] && [ -x "$new/Contents/MacOS/Filee" ] || exit 1
+            /usr/bin/codesign --verify --deep --strict "$new" || exit 1
+            while kill -0 "$pid" 2>/dev/null; do sleep 0.5; done
+            mv "$app" "$work/Filee.previous.app" || { /usr/bin/open "$app"; exit 1; }
+            if ! /usr/bin/ditto "$new" "$app"; then
+                rm -rf "$app"
+                mv "$work/Filee.previous.app" "$app"
+            fi
+            /usr/bin/open "$app"
+            """;
+        try
+        {
+            var path = Path.Combine(Path.GetDirectoryName(package)!, "install-update.sh");
+            File.WriteAllText(path, script);
+            var start = new ProcessStartInfo("/bin/sh") { UseShellExecute = false };
+            foreach (var argument in new[] { path, package, MacBundlePath!, Environment.ProcessId.ToString() })
+                start.ArgumentList.Add(argument);
+            using var process = Process.Start(start) ?? throw new InvalidOperationException("sh did not start");
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or Win32Exception
+                                       or InvalidOperationException)
+        {
+            Fail("start", ex);
+            return;
+        }
+        _log.LogInformation("Installing {Version}: Filee quits and starts again", LatestVersion);
+        Step = UpdateStep.Installing;
+        Dispatcher.UIThread.Post(App.Quit);
+    }
+
+    private static string? FindMacBundle()
+    {
+        if (!OperatingSystem.IsMacOS())
+            return null;
+        // AppContext.BaseDirectory is ".../Filee.app/Contents/MacOS/".
+        var app = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..")).TrimEnd('/');
+        return app.EndsWith(".app", StringComparison.OrdinalIgnoreCase) ? app : null;
+    }
+
+    private static bool CanWrite(string folder)
+    {
+        try
+        {
+            using (File.Create(Path.Combine(folder, $".filee-write-test-{Guid.NewGuid():N}"), 1, FileOptions.DeleteOnClose))
+                return true;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return false;
+        }
     }
 
     /// <summary>
@@ -379,10 +468,10 @@ public sealed partial class UpdateService : ObservableObject
         return await response.Content.ReadAsStringAsync(cancellationToken);
     }
 
-    /// <summary>Opens a download page: the website for installed copies, the release page (portable zip) otherwise.</summary>
+    /// <summary>Opens the download page: the latest release of this build's repository.</summary>
     public void OpenDownloadPage()
     {
-        var url = IsInstalled ? WebsiteUrl : LatestReleaseUrl;
+        var url = LatestReleaseUrl;
         try
         {
             Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
@@ -395,7 +484,7 @@ public sealed partial class UpdateService : ObservableObject
 
     /// <summary>
     /// Raised on the UI thread when an installed copy could not download or start the new installer. The app says so
-    /// and, once the user presses OK, opens <see cref="WebsiteUrl"/> (<see cref="OpenDownloadPage"/>).
+    /// and, once the user presses OK, opens the download page (<see cref="OpenDownloadPage"/>).
     /// </summary>
     public event EventHandler? UpdateFailed;
 
@@ -420,10 +509,14 @@ public sealed partial class UpdateService : ObservableObject
     /// <summary>A file attached to a release.</summary>
     internal sealed record ReleaseFile(string Name, string Url, long Size);
 
-    /// <summary>Picks the Windows installer and the checksum file from a GitHub release (null when missing).</summary>
+    /// <summary>
+    /// Picks this platform's package (<see cref="PackageSuffix"/>) and its checksum file from a GitHub release (null
+    /// when missing). A macOS package has its own "-SHA256SUMS.txt" next to it.
+    /// </summary>
     internal static (ReleaseFile? Installer, ReleaseFile? Checksums) FindFiles(JsonElement release)
     {
         ReleaseFile? installer = null, checksums = null;
+        var sums = new List<ReleaseFile>();
         if (!release.TryGetProperty("assets", out var assets) || assets.ValueKind != JsonValueKind.Array)
             return (null, null);
         foreach (var asset in assets.EnumerateArray())
@@ -433,10 +526,15 @@ public sealed partial class UpdateService : ObservableObject
             var size = asset.TryGetProperty("size", out var s) && s.TryGetInt64(out var bytes) ? bytes : 0;
             if (name.Length == 0 || !url.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
                 continue;
-            if (name.EndsWith("-win-Setup.exe", StringComparison.OrdinalIgnoreCase))
+            if (name.EndsWith(PackageSuffix, StringComparison.OrdinalIgnoreCase))
                 installer = new ReleaseFile(name, url, size);
             else if (name.EndsWith("-SHA256SUMS.txt", StringComparison.OrdinalIgnoreCase))
-                checksums = new ReleaseFile(name, url, size);
+                sums.Add(checksums = new ReleaseFile(name, url, size));
+        }
+        if (installer is { } package && package.Name.EndsWith(".tar.gz", StringComparison.OrdinalIgnoreCase))
+        {
+            var sumsName = package.Name[..^".tar.gz".Length] + "-SHA256SUMS.txt";
+            checksums = sums.FirstOrDefault(s => s.Name.Equals(sumsName, StringComparison.OrdinalIgnoreCase));
         }
         return (installer, checksums);
     }
