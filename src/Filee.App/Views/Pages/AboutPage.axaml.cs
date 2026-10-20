@@ -16,6 +16,13 @@ public partial class AboutPage : UserControl
             await top.Launcher.LaunchUriAsync(new Uri(vm.RepositoryUrl));
     }
 
+    // Avet Digital's contacts: each button carries its link in Tag.
+    private async void OnOpenLink(object? sender, RoutedEventArgs e)
+    {
+        if (sender is Button { Tag: string url } && TopLevel.GetTopLevel(this) is { } top)
+            await top.Launcher.LaunchUriAsync(new Uri(url));
+    }
+
     // A star is given on the repository page itself.
     private void OnStar(object? sender, RoutedEventArgs e) => OnOpenRepository(sender, e);
 

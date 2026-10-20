@@ -1,0 +1,93 @@
+# Avet Digital's Russian build: builds the macOS packages on GitHub and publishes them to GitHub Releases.
+# Trigger: push a tag like v1.12.1  (git tag v1.12.1 && git push origin v1.12.1), or run it by hand.
+name: macOS release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to publish, e.g. 1.12.1 (creates the tag v<version>)'
+        type: string
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  macos:
+    name: Package ${{ matrix.rid }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15
+            rid: osx-arm64
+          - runner: macos-15-intel
+            rid: osx-x64
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - name: Fonts
+        run: ./build/fetch-fonts.ps1
+
+      - name: Build portable package
+        env:
+          PACKAGE_VERSION: ${{ inputs.version || github.ref_name }}
+        run: ./build/build-portable.ps1 -Runtime '${{ matrix.rid }}' -Version $env:PACKAGE_VERSION -SkipFonts
+
+      - name: Check archive and run native converters
+        run: ./build/smoke-portable.ps1 -Runtime '${{ matrix.rid }}'
+
+      - name: Upload package
+        uses: actions/upload-artifact@v7
+        with:
+          name: portable-${{ matrix.rid }}
+          path: |
+            Releases/*-${{ matrix.rid }}.tar.gz
+            Releases/*-${{ matrix.rid }}-SHA256SUMS.txt
+          if-no-files-found: error
+
+  publish:
+    needs: macos
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download packages
+        uses: actions/download-artifact@v8
+        with:
+          pattern: portable-*
+          merge-multiple: true
+          path: Releases
+
+      - name: Publish the GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ inputs.version || github.ref_name }}
+        run: |
+          version="${VERSION#v}"
+          cat > notes.md <<'EOF'
+          ## Filee — русская сборка от Avet Digital agency
+
+          **Какой файл скачать:**
+          - Mac на Intel (Core i5 / i7 / i9) — `osx-x64.tar.gz`
+          - Mac на Apple M1 / M2 / M3 / M4 — `osx-arm64.tar.gz`
+
+          **Установка:** распакуйте архив, перетащите `install.sh` в Терминал и нажмите Enter.
+          При первом запуске: Системные настройки → Конфиденциальность и безопасность → «Всё равно открыть».
+
+          Контакты: https://avetdigital.ru/ · https://t.me/AVET_DIGITAL · info@avetdigital.ru · +7 (977) 77-000-99
+
+          Основано на [Filee](https://github.com/KnifeLemon/Filee) от KnifeLemon (лицензия MIT).
+          EOF
+          gh release create "v$version" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+            --title "Filee $version (русская сборка)" --notes-file notes.md Releases/*
