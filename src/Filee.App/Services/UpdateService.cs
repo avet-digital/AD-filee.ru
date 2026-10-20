@@ -513,8 +513,9 @@ public sealed partial class UpdateService : ObservableObject
     /// Picks this platform's package (<see cref="PackageSuffix"/>) and its checksum file from a GitHub release (null
     /// when missing). A macOS package has its own "-SHA256SUMS.txt" next to it.
     /// </summary>
-    internal static (ReleaseFile? Installer, ReleaseFile? Checksums) FindFiles(JsonElement release)
+    internal static (ReleaseFile? Installer, ReleaseFile? Checksums) FindFiles(JsonElement release, string? packageSuffix = null)
     {
+        packageSuffix ??= PackageSuffix;
         ReleaseFile? installer = null, checksums = null;
         var sums = new List<ReleaseFile>();
         if (!release.TryGetProperty("assets", out var assets) || assets.ValueKind != JsonValueKind.Array)
@@ -526,7 +527,7 @@ public sealed partial class UpdateService : ObservableObject
             var size = asset.TryGetProperty("size", out var s) && s.TryGetInt64(out var bytes) ? bytes : 0;
             if (name.Length == 0 || !url.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
                 continue;
-            if (name.EndsWith(PackageSuffix, StringComparison.OrdinalIgnoreCase))
+            if (name.EndsWith(packageSuffix, StringComparison.OrdinalIgnoreCase))
                 installer = new ReleaseFile(name, url, size);
             else if (name.EndsWith("-SHA256SUMS.txt", StringComparison.OrdinalIgnoreCase))
                 sums.Add(checksums = new ReleaseFile(name, url, size));
