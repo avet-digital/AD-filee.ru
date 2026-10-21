@@ -14,7 +14,7 @@ public static class SponsorLinks
     /// <summary>Avet Digital's donation page (T-Bank).</summary>
     public const string DonateUrl = "https://t.tb.ru/pm_short/3CFjjbcH8x0";
 
-    public const string TelegramUrl = "https://t.me/avetdigital";
+    public const string TelegramUrl = "https://t.me/AVET_DIGITAL";
     public const string WebsiteUrl = "https://avetdigital.ru/";
 
     private static readonly SponsorLink Donate = new("tbank", "Т-Банк", DonateUrl, "Icon.Heart", "#3B76CC");

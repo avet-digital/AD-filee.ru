@@ -21,7 +21,7 @@ public class SponsorTests
 
         Assert.Equal(SponsorLinks.DonateUrl, ways[0].Url);
         Assert.Equal([SponsorLinks.DonateUrl, SponsorLinks.TelegramUrl, SponsorLinks.WebsiteUrl], ways.Select(w => w.Url));
-        Assert.All(ways, w => Assert.Matches(@"^https://(t\.tb\.ru|t\.me/avetdigital|avetdigital\.ru)", w.Url));
+        Assert.All(ways, w => Assert.Matches(@"^https://(t\.tb\.ru|t\.me/AVET_DIGITAL|avetdigital\.ru)", w.Url));
     }
 
     [AvaloniaTheory]

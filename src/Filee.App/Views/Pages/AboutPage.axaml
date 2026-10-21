@@ -42,8 +42,8 @@
             <Button Classes="ghost" Padding="0" Click="OnOpenLink" Tag="https://avetdigital.ru/" Margin="0,4,0,0">
               <TextBlock Text="avetdigital.ru" Foreground="{DynamicResource AccentBrush}" />
             </Button>
-            <Button Classes="ghost" Padding="0" Click="OnOpenLink" Tag="https://t.me/avetdigital">
-              <TextBlock Text="Telegram: @avetdigital" Foreground="{DynamicResource AccentBrush}" />
+            <Button Classes="ghost" Padding="0" Click="OnOpenLink" Tag="https://t.me/AVET_DIGITAL">
+              <TextBlock Text="Telegram: @AVET_DIGITAL" Foreground="{DynamicResource AccentBrush}" />
             </Button>
             <Button Classes="ghost" Padding="0" Click="OnOpenLink" Tag="https://wa.me/79777700099">
               <TextBlock Text="WhatsApp" Foreground="{DynamicResource AccentBrush}" />

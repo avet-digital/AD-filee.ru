@@ -64,7 +64,7 @@
 **Avet Digital agency** — разработка, оформление и поддержка.
 
 - Сайт: [avetdigital.ru](https://avetdigital.ru/)
-- Telegram: [@avetdigital](https://t.me/avetdigital)
+- Telegram-канал: [@AVET_DIGITAL](https://t.me/AVET_DIGITAL)
 - WhatsApp: [+7 (977) 770-00-99](https://wa.me/79777700099)
 - Почта: [info@avetdigital.ru](mailto:info@avetdigital.ru)
 - Телефон: +7 (977) 770-00-99
