@@ -1,7 +1,9 @@
 // Update check against GitHub Releases. When a newer version is out the app says so (sidebar, notice, tray). In an
 // installed copy "Update" downloads the new installer, checks it against the release's SHA256SUMS file and that the
 // publisher who signed this copy signed it too (Authenticode), and runs it;
-// Setup closes Filee, updates it in place (settings are kept) and starts it again. A portable copy, a copy run from
+// Setup closes Filee, updates it in place (settings are kept) and starts it again. On macOS a published Filee.app in a
+// folder the user can write downloads the package for its processor, checks it the same way, unpacks it and checks the
+// bundle's signature, and a small helper swaps the bundles once Filee has quit. A portable copy, a copy run from
 // source, or a failed download opens a download page instead. The check works in every build.
 // An official build also carries the public half of Filee's update key: the SHA256SUMS file must then be signed with
 // it (UpdateSignature), on every platform, and a Windows installer must come from the publisher the build names.
@@ -79,7 +81,7 @@ public sealed partial class UpdateService : ObservableObject
     /// <summary>GitHub repository from Directory.Build.props (FileeRepositoryUrl).</summary>
     public static string RepositoryUrl =>
         typeof(UpdateService).Assembly.GetCustomAttributes<AssemblyMetadataAttribute>()
-            .FirstOrDefault(a => a.Key == "RepositoryUrl")?.Value ?? "https://github.com/KnifeLemon/Filee";
+            .FirstOrDefault(a => a.Key == "RepositoryUrl")?.Value ?? "https://github.com/avet-digital/AD-filee.ru";
 
     public static string CurrentVersion =>
         typeof(UpdateService).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion.Split('+')[0]
@@ -91,21 +93,45 @@ public sealed partial class UpdateService : ObservableObject
     /// <summary>Release page with every file, including the portable zip.</summary>
     public static string LatestReleaseUrl => RepositoryUrl.TrimEnd('/') + "/releases/latest";
 
-    /// <summary>The website: one big download button, friendlier than the GitHub release page.</summary>
-    public const string WebsiteUrl = "https://filee.sh/";
-
     private static readonly bool InstalledCopy =
         OperatingSystem.IsWindows() && IsInstalledIn(AppContext.BaseDirectory)
-        || OperatingSystem.IsLinux() && IsLinuxInstalled(AppContext.BaseDirectory);
+        || OperatingSystem.IsLinux() && IsLinuxInstalled(AppContext.BaseDirectory)
+        || OperatingSystem.IsMacOS() && IsReleaseBuild && MacBundlePath is { } app && CanWrite(Path.GetDirectoryName(app)!);
 
     /// <summary>
-    /// Installed by Windows Setup or Linux install.sh, and not marked portable. A marked copy is updated manually
-    /// so an installer cannot register it or replace the user's installed copy.
+    /// Installed by Windows Setup or Linux install.sh, or a published Filee.app in a folder the user can write
+    /// (~/Applications, or /Applications for an administrator), and not marked portable. A marked copy is updated
+    /// manually so an installer cannot register it or replace the user's installed copy.
     /// </summary>
     public static bool IsInstalled => !PortableMode.IsEnabled && InstalledCopy;
 
     internal static bool IsInstalledIn(string folder) =>
         File.Exists(Path.Combine(folder, "uninstall.exe")) || File.Exists(Path.Combine(folder, "unins000.exe"));
+
+    /// <summary>The Filee.app this copy runs from on macOS (".../Filee.app"), or null elsewhere.</summary>
+    internal static string? MacBundlePath => FindMacBundle();
+
+    private static string? FindMacBundle()
+    {
+        if (!OperatingSystem.IsMacOS())
+            return null;
+        // AppContext.BaseDirectory is ".../Filee.app/Contents/MacOS/".
+        var app = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..")).TrimEnd('/');
+        return app.EndsWith(".app", StringComparison.OrdinalIgnoreCase) ? app : null;
+    }
+
+    private static bool CanWrite(string folder)
+    {
+        try
+        {
+            using (File.Create(Path.Combine(folder, $".filee-write-test-{Guid.NewGuid():N}"), 1, FileOptions.DeleteOnClose))
+                return true;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return false;
+        }
+    }
 
     internal static bool IsLinuxInstalled(string baseDirectory)
     {
@@ -142,14 +168,20 @@ public sealed partial class UpdateService : ObservableObject
     private static bool IsWindowsTarget(string target) => target is "win" or "win-arm64";
 
     /// <summary>
-    /// Target platform for release assets ("win", "win-arm64", "linux-x64", "linux-arm64"). Tests can override this.
+    /// Target platform for release assets ("win", "win-arm64", "linux-x64", "linux-arm64", "osx-x64", "osx-arm64").
+    /// Tests can override this.
     /// </summary>
     internal string TargetPlatform { get; set; } = DefaultTargetPlatform();
+
+    /// <summary>The macOS release package for a process of <paramref name="architecture"/>.</summary>
+    internal static string GetMacTarget(Architecture architecture) => architecture == Architecture.Arm64 ? "osx-arm64" : "osx-x64";
 
     private static string DefaultTargetPlatform()
     {
         if (OperatingSystem.IsWindows())
             return GetWindowsTarget(RuntimeInformation.ProcessArchitecture);
+        if (OperatingSystem.IsMacOS())
+            return GetMacTarget(RuntimeInformation.ProcessArchitecture);
         if (OperatingSystem.IsLinux())
         {
             try
@@ -518,7 +550,112 @@ public sealed partial class UpdateService : ObservableObject
             return;
         }
 
-        throw new PlatformNotSupportedException("In-app update is only supported on Windows and Linux");
+        if (TargetPlatform.StartsWith("osx-", StringComparison.OrdinalIgnoreCase) && MacBundlePath is { } app)
+        {
+            // Everything that can fail is done while Filee still runs (download, checksum, unpacking, signature check),
+            // so a failure is shown instead of Filee closing for nothing. The helper only swaps the bundles.
+            string? workspace = null;
+            string newApp;
+            try
+            {
+                workspace = Directory.CreateTempSubdirectory("filee-update-").FullName;
+                var progress = new Progress<int>(percent => DownloadPercent = percent);
+                var package = await DownloadInstallerAsync(workspace, progress);
+                newApp = await Task.Run(() => UnpackMacBundle(package, Path.Combine(workspace, "payload")));
+            }
+            catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or IOException
+                                           or InvalidDataException or UnauthorizedAccessException or Win32Exception)
+            {
+                DeleteMacWorkspace(workspace);
+                Fail("download", ex);
+                return;
+            }
+
+            var logDir = Path.Combine(UserDataStore.DefaultDirectory, "logs");
+            Directory.CreateDirectory(logDir);
+            var logFile = Path.Combine(logDir, $"filee-{DateTime.Now:yyyyMMdd}.log");
+            var markerFile = FailureMarkerPathOverride ?? Path.Combine(UserDataStore.DefaultDirectory, ".update-failed");
+            try
+            {
+                var startInfo = new ProcessStartInfo("/bin/sh") { UseShellExecute = false };
+                startInfo.ArgumentList.Add("-c");
+                startInfo.ArgumentList.Add(MacSwapScript);
+                foreach (var argument in new[] { "_", Environment.ProcessId.ToString(), app, newApp, workspace, logFile, markerFile })
+                    startInfo.ArgumentList.Add(argument);
+                using var helper = StartProcess(startInfo) ?? throw new InvalidOperationException("sh did not start");
+            }
+            catch (Exception ex) when (ex is Win32Exception or InvalidOperationException)
+            {
+                DeleteMacWorkspace(workspace);
+                Fail("start", ex);
+                return;
+            }
+
+            _log.LogInformation("Started update helper for {Version}, exiting current process", LatestVersion);
+            Step = UpdateStep.Installing;
+            RequestApplicationShutdown?.Invoke();
+            return;
+        }
+
+        throw new PlatformNotSupportedException("In-app update is only supported on Windows, Linux and macOS");
+    }
+
+    /// <summary>
+    /// Swaps Filee.app once Filee has quit: $1 pid, $2 the installed Filee.app, $3 the new one, $4 the workspace, $5 the
+    /// log, $6 the failure marker. The old bundle goes back if copying fails; Filee starts again either way.
+    /// </summary>
+    private const string MacSwapScript =
+        "exec >>\"$5\" 2>&1; " +
+        "for _ in $(seq 1 600); do if ! kill -0 \"$1\" 2>/dev/null; then break; fi; sleep 0.1; done; " +
+        "if kill -0 \"$1\" 2>/dev/null; then echo \"Update aborted: Filee (PID $1) did not exit within timeout\"; rm -rf \"$4\"; exit 1; fi; " +
+        "if ! mv \"$2\" \"$4/Filee.previous.app\"; then echo \"Update failed: could not move $2\"; " +
+        "echo \"$5\" > \"$6\"; rm -rf \"$4\"; exec /usr/bin/open \"$2\" --args --background; fi; " +
+        "if /usr/bin/ditto \"$3\" \"$2\"; then rm -rf \"$4\"; exec /usr/bin/open \"$2\" --args --background --whats-new; fi; " +
+        "echo \"Update failed: could not copy the new Filee.app, restoring the previous one\"; " +
+        "rm -rf \"$2\"; mv \"$4/Filee.previous.app\" \"$2\"; echo \"$5\" > \"$6\"; rm -rf \"$4\"; " +
+        "exec /usr/bin/open \"$2\" --args --background";
+
+    /// <summary>
+    /// Unpacks a macOS release package (.tar.gz with Filee.app) into <paramref name="destination"/> with the system tar
+    /// (it refuses absolute paths, ".." and writing through links) and checks the bundle's signature. Returns the new
+    /// Filee.app; throws <see cref="InvalidDataException"/> when the package is not a valid, intact Filee.app.
+    /// </summary>
+    internal static string UnpackMacBundle(string package, string destination)
+    {
+        Directory.CreateDirectory(destination);
+        RunTool("/usr/bin/tar", "-xzf", package, "-C", destination);
+        var apps = Directory.GetDirectories(destination, "Filee.app", SearchOption.TopDirectoryOnly)
+            .Concat(Directory.GetDirectories(destination).SelectMany(d => Directory.GetDirectories(d, "Filee.app")))
+            .ToList();
+        if (apps.Count != 1 || new DirectoryInfo(apps[0]).LinkTarget is not null
+            || !File.Exists(Path.Combine(apps[0], "Contents", "MacOS", "Filee")))
+            throw new InvalidDataException("The package does not contain a single Filee.app");
+        RunTool("/usr/bin/codesign", "--verify", "--deep", "--strict", apps[0]);
+        return apps[0];
+    }
+
+    private static void RunTool(string tool, params string[] arguments)
+    {
+        var start = new ProcessStartInfo(tool) { UseShellExecute = false, RedirectStandardError = true };
+        foreach (var argument in arguments)
+            start.ArgumentList.Add(argument);
+        using var process = Process.Start(start) ?? throw new InvalidDataException($"{tool} did not start");
+        var error = process.StandardError.ReadToEnd();
+        process.WaitForExit();
+        if (process.ExitCode != 0)
+            throw new InvalidDataException($"{Path.GetFileName(tool)} failed ({process.ExitCode}): {error.Trim()}");
+    }
+
+    private static void DeleteMacWorkspace(string? workspace)
+    {
+        try
+        {
+            if (workspace is not null && Directory.Exists(workspace))
+                Directory.Delete(workspace, recursive: true);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+        }
     }
 
     /// <summary>
@@ -693,10 +830,10 @@ public sealed partial class UpdateService : ObservableObject
         return await response.Content.ReadAsByteArrayAsync(cancellationToken);
     }
 
-    /// <summary>Opens a download page: the website for installed copies, the release page (portable zip) otherwise.</summary>
+    /// <summary>Opens the download page: the latest release of this build's repository.</summary>
     public void OpenDownloadPage()
     {
-        var url = IsInstalled ? WebsiteUrl : LatestReleaseUrl;
+        var url = LatestReleaseUrl;
         try
         {
             Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
@@ -712,7 +849,7 @@ public sealed partial class UpdateService : ObservableObject
 
     /// <summary>
     /// Raised on the UI thread when an installed copy could not download or start the new installer. The app says so
-    /// and, once the user presses OK, opens <see cref="WebsiteUrl"/> (<see cref="OpenDownloadPage"/>).
+    /// and, once the user presses OK, opens the download page (<see cref="OpenDownloadPage"/>).
     /// </summary>
     public event EventHandler? UpdateFailed;
 
@@ -794,7 +931,9 @@ public sealed partial class UpdateService : ObservableObject
         // Windows has one checksum file for x64 and ARM64, Filee-<v>-SHA256SUMS.txt: Filee 2.4.0 and older take the
         // last file ending in -SHA256SUMS.txt that isn't Linux or macOS, so an ARM64 one next to it would break their
         // updates. The x64 Setup is Filee-<v>-win-Setup.exe, the ARM64 one Filee-<v>-win-arm64-Setup.exe.
-        var isLinux = target.StartsWith("linux-", StringComparison.OrdinalIgnoreCase);
+        // Linux and macOS packages are Filee-<v>-<target>.tar.gz, each with its own Filee-<v>-<target>-SHA256SUMS.txt.
+        var isLinux = target.StartsWith("linux-", StringComparison.OrdinalIgnoreCase)
+                      || target.StartsWith("osx-", StringComparison.OrdinalIgnoreCase);
         var expectedInstallerSuffix = isLinux ? $"-{target}.tar.gz" : $"-{target}-Setup.exe";
         var expectedChecksumsSuffix = isLinux ? $"-{target}-SHA256SUMS.txt" : "-SHA256SUMS.txt";
 

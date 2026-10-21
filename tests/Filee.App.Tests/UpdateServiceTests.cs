@@ -241,6 +241,37 @@ public class UpdateServiceTests
     }
 
     [Fact]
+    public void The_mac_target_follows_the_process_architecture()
+    {
+        Assert.Equal("osx-x64", UpdateService.GetMacTarget(Architecture.X64));
+        Assert.Equal("osx-arm64", UpdateService.GetMacTarget(Architecture.Arm64));
+    }
+
+    [Theory]
+    [InlineData("osx-x64")]
+    [InlineData("osx-arm64")]
+    public void Mac_package_comes_with_its_own_checksums(string target)
+    {
+        using var release = JsonDocument.Parse($$"""
+            {"tag_name": "v9.9.9", "assets": [
+              {"name": "Filee-9.9.9-SHA256SUMS.txt", "size": 1, "browser_download_url": "{{Base}}Filee-9.9.9-SHA256SUMS.txt"},
+              {"name": "Filee-9.9.9-win-Setup.exe", "size": 1, "browser_download_url": "{{Base}}Filee-9.9.9-win-Setup.exe"},
+              {"name": "Filee-9.9.9-osx-arm64-SHA256SUMS.txt", "size": 1, "browser_download_url": "{{Base}}Filee-9.9.9-osx-arm64-SHA256SUMS.txt"},
+              {"name": "Filee-9.9.9-osx-arm64.dmg", "size": 1, "browser_download_url": "{{Base}}Filee-9.9.9-osx-arm64.dmg"},
+              {"name": "Filee-9.9.9-osx-arm64.tar.gz", "size": 1, "browser_download_url": "{{Base}}Filee-9.9.9-osx-arm64.tar.gz"},
+              {"name": "Filee-9.9.9-osx-x64-SHA256SUMS.txt", "size": 1, "browser_download_url": "{{Base}}Filee-9.9.9-osx-x64-SHA256SUMS.txt"},
+              {"name": "Filee-9.9.9-osx-x64.dmg", "size": 1, "browser_download_url": "{{Base}}Filee-9.9.9-osx-x64.dmg"},
+              {"name": "Filee-9.9.9-osx-x64.tar.gz", "size": 1, "browser_download_url": "{{Base}}Filee-9.9.9-osx-x64.tar.gz"}
+            ]}
+            """);
+
+        var (installer, checksums) = UpdateService.FindFiles(release.RootElement, target);
+
+        Assert.Equal($"Filee-9.9.9-{target}.tar.gz", installer?.Name);
+        Assert.Equal($"Filee-9.9.9-{target}-SHA256SUMS.txt", checksums?.Name);
+    }
+
+    [Fact]
     public void Release_without_files_or_with_plain_http_links_has_no_installer()
     {
         using var empty = JsonDocument.Parse("""{"tag_name": "v9.9.9"}""");

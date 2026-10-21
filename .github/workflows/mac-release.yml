@@ -1,0 +1,115 @@
+# Avet Digital's Russian build: builds the macOS packages on GitHub and publishes them to GitHub Releases.
+# Trigger: push a tag like v1.12.1  (git tag v1.12.1 && git push origin v1.12.1), or run it by hand.
+name: macOS release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to publish, e.g. 1.12.1 (creates the tag v<version>)'
+        type: string
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  macos:
+    name: Package ${{ matrix.rid }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15
+            rid: osx-arm64
+          - runner: macos-15-intel
+            rid: osx-x64
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - name: Fonts
+        run: ./build/fetch-fonts.ps1
+
+      - name: Build portable package
+        env:
+          PACKAGE_VERSION: ${{ inputs.version || github.ref_name }}
+        run: ./build/build-portable.ps1 -Runtime '${{ matrix.rid }}' -Version $env:PACKAGE_VERSION -SkipFonts
+
+      - name: Check archive and run native converters
+        run: ./build/smoke-portable.ps1 -Runtime '${{ matrix.rid }}'
+
+      # What people download: a disk image with Filee.app and a link to Applications to drag it onto. The .tar.gz
+      # stays in the release for the in-app updater. Its checksum goes into the same SHA256SUMS file.
+      - name: Disk image
+        shell: bash
+        run: |
+          set -euo pipefail
+          archive=$(ls Releases/*-${{ matrix.rid }}.tar.gz)
+          name=$(basename "$archive" .tar.gz)
+          stage="$RUNNER_TEMP/dmg"
+          mkdir -p "$stage/image"
+          tar -xzf "$archive" -C "$stage"
+          ditto "$stage/$name/Filee.app" "$stage/image/Filee.app"
+          ln -s /Applications "$stage/image/Applications"
+          for attempt in 1 2 3; do
+            hdiutil create -volname "Filee" -srcfolder "$stage/image" -fs HFS+ -format UDZO -ov "Releases/$name.dmg" && break
+            sleep 10
+          done
+          hdiutil verify "Releases/$name.dmg"
+          (cd Releases && shasum -a 256 "$name.dmg" >> "$name-SHA256SUMS.txt")
+
+      - name: Upload package
+        uses: actions/upload-artifact@v7
+        with:
+          name: portable-${{ matrix.rid }}
+          path: |
+            Releases/*-${{ matrix.rid }}.dmg
+            Releases/*-${{ matrix.rid }}.tar.gz
+            Releases/*-${{ matrix.rid }}-SHA256SUMS.txt
+          if-no-files-found: error
+
+  publish:
+    needs: macos
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download packages
+        uses: actions/download-artifact@v8
+        with:
+          pattern: portable-*
+          merge-multiple: true
+          path: Releases
+
+      - name: Publish the GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ inputs.version || github.ref_name }}
+        run: |
+          version="${VERSION#v}"
+          cat > notes.md <<'EOF'
+          ## Filee — русская сборка от Avet Digital agency
+
+          **Какой файл скачать:**
+          - Mac на Intel (Core i5 / i7 / i9) — `osx-x64.dmg`
+          - Mac на Apple M1 / M2 / M3 / M4 — `osx-arm64.dmg`
+
+          **Установка:** откройте `.dmg` и перетащите Filee в папку «Программы» (Applications).
+          При первом запуске: Системные настройки → Конфиденциальность и безопасность → «Всё равно открыть».
+
+          Уже установлена Filee от Avet Digital? Нажмите «Обновить» в самой программе — она обновится сама.
+          Файлы `.tar.gz` нужны для этого автообновления, скачивать их не требуется.
+
+          Контакты: https://avetdigital.ru/ · https://t.me/AVET_DIGITAL · info@avetdigital.ru · +7 (977) 77-000-99
+          EOF
+          gh release create "v$version" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+            --title "Filee $version (русская сборка)" --notes-file notes.md Releases/*
