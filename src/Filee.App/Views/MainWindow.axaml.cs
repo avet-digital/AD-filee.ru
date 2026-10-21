@@ -29,7 +29,7 @@ public partial class MainWindow : Window
     }
 
     private async void OnSponsor(object? sender, RoutedEventArgs e) =>
-        await Launcher.LaunchUriAsync(new Uri(SponsorLinks.DonateUrl));
+        await SponsorWindow.Create(AppHost.Get<ILocalizer>()).ShowDialog(this);
 
     /// <summary>
     /// Closing the window keeps Filee running in the tray, quits, or asks which (<see cref="AppSettings.CloseAction"/>).

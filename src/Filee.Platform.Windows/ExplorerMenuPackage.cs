@@ -91,7 +91,7 @@ public static class ExplorerMenuPackage
                 new XAttribute("ProcessorArchitecture", Architecture)),
             new XElement(Foundation + "Properties",
                 new XElement(Foundation + "DisplayName", "Filee"),
-                new XElement(Foundation + "PublisherDisplayName", "Filee contributors"),
+                new XElement(Foundation + "PublisherDisplayName", "Avet Digital"),
                 new XElement(Foundation + "Logo", LogoPath),
                 new XElement(Uap10 + "AllowExternalContent", "true")),
             new XElement(Foundation + "Resources",

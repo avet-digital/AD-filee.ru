@@ -71,7 +71,7 @@ public sealed partial class UpdateService : ObservableObject
     /// <summary>GitHub repository from Directory.Build.props (FileeRepositoryUrl).</summary>
     public static string RepositoryUrl =>
         typeof(UpdateService).Assembly.GetCustomAttributes<AssemblyMetadataAttribute>()
-            .FirstOrDefault(a => a.Key == "RepositoryUrl")?.Value ?? "https://github.com/avet-digital/filee-ru";
+            .FirstOrDefault(a => a.Key == "RepositoryUrl")?.Value ?? "https://github.com/avet-digital/AD-filee.ru";
 
     public static string CurrentVersion =>
         typeof(UpdateService).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion.Split('+')[0]

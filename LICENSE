@@ -1,21 +1,107 @@
-MIT License
+# Лицензионное соглашение с конечным пользователем (публичная оферта)
 
-Copyright (c) 2026 Myeonggu Kim (KnifeLemon) and Filee contributors
+**Программа:** Filee версии 2.0.0
+**Правообладатель / Лицензиар:** ООО «Авет Диджитал» (Avet Digital), ИНН 6382093319, ОГРН 1226300039767
+**Физический адрес:** г. Москва, ул. Мясницкая, 42 · **E-mail:** info@avetdigital.ru · **Телефон:** +7 (977) 770-00-99
+**Сайт:** https://avetdigital.ru
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+## 1. Общие положения
+1.1. Настоящее Соглашение является лицензионным договором, заключаемым в упрощённом порядке
+(п. 5 ст. 1286 ГК РФ), и публичной офертой Лицензиара любому физическому или юридическому
+лицу (Пользователю).
+1.2. Пользователь принимает (акцептует) Соглашение, когда устанавливает, копирует или запускает
+Программу. Если Пользователь не согласен с условиями, он обязан прекратить использование
+Программы и удалить её.
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+## 2. Предмет
+2.1. Лицензиар предоставляет Пользователю простую (неисключительную) лицензию на использование
+Программы способами, указанными в разделе 3, на территории всего мира на срок действия
+исключительного права.
+2.2. Лицензия предоставляется безвозмездно.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+## 3. Права Пользователя
+3.1. Устанавливать и запускать Программу на любом количестве своих устройств.
+3.2. Использовать Программу в личных и коммерческих целях.
+
+## 4. Ограничения
+4.1. Пользователь не вправе выдавать Программу или её модификации за свой продукт, удалять
+сведения о Лицензиаре или распространять Программу от своего имени без письменного согласия
+Лицензиара.
+4.2. Товарные знаки, логотип и наименование Avet Digital не передаются
+Пользователю.
+
+## 5. Компоненты третьих лиц
+5.1. В состав Программы могут входить компоненты с открытым исходным кодом. Они
+распространяются на условиях их собственных лицензий, перечень и тексты которых приведены
+в файле сторонних лицензий (THIRD-PARTY-NOTICES) в составе Программы. Если такая
+лицензия даёт Пользователю более широкие права на соответствующий компонент, применяются
+её условия.
+
+## 6. Ответственность
+6.1. Программа предоставляется «как есть» (as is). Лицензиар не гарантирует, что Программа
+будет соответствовать целям Пользователя и работать без ошибок.
+6.2. Лицензиар не несёт ответственности за упущенную выгоду, утрату данных и иные косвенные
+убытки, возникшие в связи с использованием Программы, в пределах, допускаемых законодательством РФ.
+
+## 7. Персональные данные
+7.1. Программа не собирает и не передаёт персональные данные Пользователя, если иное прямо
+не указано в интерфейсе Программы или в Политике конфиденциальности на сайте Лицензиара.
+
+## 8. Заключительные положения
+8.1. К Соглашению применяется право Российской Федерации.
+8.2. Лицензиар вправе изменять Соглашение. Новая редакция действует для новых версий Программы.
+8.3. Вопросы и претензии направляются на info@avetdigital.ru.
+
+2026 © Avet Digital
+
+---
+
+# End User License Agreement (public offer)
+
+**Software:** Filee version 2.0.0
+**Licensor:** Avet Digital LLC, TIN 6382093319, OGRN 1226300039767
+**Physical address:** 42 Myasnitskaya St., Moscow, Russia · **E-mail:** info@avetdigital.ru · **Phone:** +7 (977) 770-00-99
+**Website:** https://avetdigital.ru
+
+## 1. General
+1.1. This Agreement is a license agreement concluded in simplified form (Art. 1286(5) of the
+Civil Code of the Russian Federation) and a public offer by the Licensor to any person (User).
+1.2. Installing, copying or running the Software constitutes acceptance. If you do not agree,
+stop using and delete the Software.
+
+## 2. Subject
+2.1. The Licensor grants the User a simple (non-exclusive), worldwide license for the term of
+the exclusive right, to use the Software as described in Section 3.
+2.2. The license is granted free of charge.
+
+## 3. User rights
+3.1. Install and run the Software on any number of the User's own devices.
+3.2. Use the Software for personal and commercial purposes.
+
+## 4. Restrictions
+4.1. The User may not present the Software or its modifications as their own product, remove
+Licensor information, or redistribute the Software under their own name without the Licensor's
+written consent.
+4.2. No rights to the Avet Digital trademarks, logo or names are granted.
+
+## 5. Third-party components
+5.1. The Software may include open-source components distributed under their own licenses,
+listed in the third-party notices file (THIRD-PARTY-NOTICES) shipped with the Software. Where
+such a license grants broader rights for a component, its terms apply to that component.
+
+## 6. Liability
+6.1. The Software is provided "as is", without warranty of fitness for a particular purpose or
+error-free operation.
+6.2. To the extent permitted by Russian law, the Licensor is not liable for lost profits, data
+loss or other indirect damages.
+
+## 7. Personal data
+7.1. The Software does not collect or transmit personal data unless explicitly stated in its UI
+or in the Privacy Policy on the Licensor's website.
+
+## 8. Final provisions
+8.1. This Agreement is governed by the laws of the Russian Federation.
+8.2. The Licensor may amend this Agreement. A new edition applies to new versions of the Software.
+8.3. Questions and claims: info@avetdigital.ru.
+
+2026 © Avet Digital
