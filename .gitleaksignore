@@ -2,3 +2,5 @@
 # GestureDetector.cs:74 — переменная token = TickCount64 ^ координаты (метка жеста мыши), не секрет.
 49961742c2aa7c0bc4d9fbf40071eca25c42aa8b:src/Filee.App/Services/Triggers/GestureDetector.cs:generic-api-key:74
 src/Filee.App/Services/Triggers/GestureDetector.cs:generic-api-key:74
+# Цитата той же строки в первой версии отчёта audit/SECURITY_REPORT.md (перефразирована в следующих коммитах).
+65122f9d63d67de9bcae744b74633147e435a705:audit/SECURITY_REPORT.md:generic-api-key:38
