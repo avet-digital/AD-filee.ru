@@ -4,7 +4,8 @@ name: CI
 # Changes to documentation and repository metadata only skip the build and tests (see the changes job).
 on:
   push:
-    branches: [main]
+    # ad/**: Avet Digital's working branches (AD-QS gate G2 builds and tests them).
+    branches: [main, 'ad/**']
   pull_request:
 
 permissions:
