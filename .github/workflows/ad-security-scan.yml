@@ -49,6 +49,7 @@ jobs:
 
       # --- Утечки секретов ---------------------------------------------------
       - name: gitleaks — вся история git
+        if: ${{ !cancelled() }}
         run: |
           curl -sSfL -o gl.tgz "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
           tar -xzf gl.tgz gitleaks
@@ -56,6 +57,7 @@ jobs:
 
       # --- Уязвимости в зависимостях -----------------------------------------
       - name: osv-scanner — зависимости
+        if: ${{ !cancelled() }}
         run: |
           curl -sSfL -o osv-scanner "https://github.com/google/osv-scanner/releases/download/v${OSV_SCANNER_VERSION}/osv-scanner_linux_amd64"
           chmod +x osv-scanner
@@ -64,6 +66,7 @@ jobs:
 
       # --- Статический анализ ------------------------------------------------
       - name: semgrep — правила безопасности
+        if: ${{ !cancelled() }}
         run: |
           pip install --quiet "semgrep==${SEMGREP_VERSION}"
           semgrep scan --metrics=off --config p/security-audit --config p/owasp-top-ten \

@@ -1,0 +1,4 @@
+# Ложные срабатывания gitleaks, разобранные по регламенту AD-QS (audit/SECURITY_REPORT.md).
+# GestureDetector.cs:74 — переменная token = TickCount64 ^ координаты (метка жеста мыши), не секрет.
+49961742c2aa7c0bc4d9fbf40071eca25c42aa8b:src/Filee.App/Services/Triggers/GestureDetector.cs:generic-api-key:74
+src/Filee.App/Services/Triggers/GestureDetector.cs:generic-api-key:74
