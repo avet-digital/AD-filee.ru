@@ -22,7 +22,7 @@ public static class SetupNames
     public const string RunKey = @"Software\Microsoft\Windows\CurrentVersion\Run";
 
     public const string AppName = "Filee";
-    public const string Publisher = "Filee contributors";
+    public const string Publisher = "Avet Digital";
     public const string AppExe = "Filee.exe";
 
     /// <summary>The uninstaller next to Filee.exe (UpdateService.IsInstalled looks for it).</summary>
