@@ -11,6 +11,9 @@ public sealed record SponsorLink(string Id, string Name, string Url, string Icon
 
 public static class SponsorLinks
 {
+    /// <summary>Avet Digital's donation page: the "Sponsor" buttons of this build open it directly.</summary>
+    public const string DonateUrl = "https://t.tb.ru/pm_short/3CFjjbcH8x0";
+
     public const string GitHubSponsorsUrl = "https://github.com/sponsors/KnifeLemon";
     public const string FairyUrl = "https://fairy.hada.io/@filee";
     public const string PatreonUrl = "https://patreon.com/KnifeLemon";

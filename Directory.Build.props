@@ -20,7 +20,8 @@
     <Copyright>Copyright (c) Filee contributors</Copyright>
 
     <!-- Single source of truth for the GitHub repository (used by the updater and the About page). -->
-    <FileeRepositoryUrl>https://github.com/KnifeLemon/Filee</FileeRepositoryUrl>
+    <!-- Avet Digital's Russian build: updates come from our releases. Upstream: https://github.com/KnifeLemon/Filee -->
+    <FileeRepositoryUrl>https://github.com/avet-digital/filee-ru</FileeRepositoryUrl>
     <RepositoryUrl>$(FileeRepositoryUrl)</RepositoryUrl>
   </PropertyGroup>
 </Project>

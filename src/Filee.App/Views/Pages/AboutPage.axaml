@@ -30,6 +30,31 @@
         </StackPanel>
       </StackPanel>
     </Border>
+    <!-- Avet Digital's Russian build: logo and contacts -->
+    <Border Classes="card">
+      <StackPanel Spacing="12">
+        <TextBlock Classes="h2" Text="{DynamicResource about.build_title}" />
+        <WrapPanel>
+          <Image Source="avares://Filee/Assets/Brand/avet-digital.png" Width="160" Height="96" Margin="0,0,18,8"
+                 VerticalAlignment="Top" />
+          <StackPanel Spacing="4" VerticalAlignment="Center">
+            <TextBlock TextWrapping="Wrap" Text="{DynamicResource about.build_text}" />
+            <Button Classes="ghost" Padding="0" Click="OnOpenLink" Tag="https://avetdigital.ru/" Margin="0,4,0,0">
+              <TextBlock Text="avetdigital.ru" Foreground="{DynamicResource AccentBrush}" />
+            </Button>
+            <Button Classes="ghost" Padding="0" Click="OnOpenLink" Tag="https://t.me/AVET_DIGITAL">
+              <TextBlock Text="Telegram: @AVET_DIGITAL" Foreground="{DynamicResource AccentBrush}" />
+            </Button>
+            <Button Classes="ghost" Padding="0" Click="OnOpenLink" Tag="mailto:info@avetdigital.ru">
+              <TextBlock Text="info@avetdigital.ru" Foreground="{DynamicResource AccentBrush}" />
+            </Button>
+            <Button Classes="ghost" Padding="0" Click="OnOpenLink" Tag="tel:+79777700099">
+              <TextBlock Text="+7 (977) 77-000-99" Foreground="{DynamicResource AccentBrush}" />
+            </Button>
+          </StackPanel>
+        </WrapPanel>
+      </StackPanel>
+    </Border>
     <!-- The sponsors right below Filee itself, while there are any -->
     <Border Classes="card" IsVisible="{Binding #Supporters.IsVisible}">
       <StackPanel Spacing="12">

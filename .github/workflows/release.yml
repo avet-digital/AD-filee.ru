@@ -10,9 +10,9 @@
 # downloads them.
 name: Release
 
+# Avet Digital's build publishes macOS packages with mac-release.yml; this upstream workflow only runs by hand.
 on:
-  push:
-    tags: ['v*']
+  workflow_dispatch:
 
 permissions:
   contents: write

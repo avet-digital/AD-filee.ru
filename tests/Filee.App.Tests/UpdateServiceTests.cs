@@ -78,10 +78,32 @@ public class UpdateServiceTests
             ]}
             """);
 
-        var (installer, checksums) = UpdateService.FindFiles(release.RootElement);
+        var (installer, checksums) = UpdateService.FindFiles(release.RootElement, "-win-Setup.exe");
 
         Assert.Equal(new UpdateService.ReleaseFile("Filee-9.9.9-win-Setup.exe", Base + "Filee-9.9.9-win-Setup.exe", 1234), installer);
         Assert.Equal("Filee-9.9.9-SHA256SUMS.txt", checksums?.Name);
+    }
+
+    [Theory]
+    [InlineData("-osx-x64.tar.gz", "Filee-9.9.9-osx-x64")]
+    [InlineData("-osx-arm64.tar.gz", "Filee-9.9.9-osx-arm64")]
+    public void Mac_package_comes_with_its_own_checksums(string suffix, string package)
+    {
+        using var release = JsonDocument.Parse($$"""
+            {"tag_name": "v9.9.9", "assets": [
+              {"name": "Filee-9.9.9-osx-arm64-SHA256SUMS.txt", "size": 1, "browser_download_url": "{{Base}}Filee-9.9.9-osx-arm64-SHA256SUMS.txt"},
+              {"name": "Filee-9.9.9-osx-arm64.dmg", "size": 1, "browser_download_url": "{{Base}}Filee-9.9.9-osx-arm64.dmg"},
+              {"name": "Filee-9.9.9-osx-arm64.tar.gz", "size": 1, "browser_download_url": "{{Base}}Filee-9.9.9-osx-arm64.tar.gz"},
+              {"name": "Filee-9.9.9-osx-x64-SHA256SUMS.txt", "size": 1, "browser_download_url": "{{Base}}Filee-9.9.9-osx-x64-SHA256SUMS.txt"},
+              {"name": "Filee-9.9.9-osx-x64.dmg", "size": 1, "browser_download_url": "{{Base}}Filee-9.9.9-osx-x64.dmg"},
+              {"name": "Filee-9.9.9-osx-x64.tar.gz", "size": 1, "browser_download_url": "{{Base}}Filee-9.9.9-osx-x64.tar.gz"}
+            ]}
+            """);
+
+        var (installer, checksums) = UpdateService.FindFiles(release.RootElement, suffix);
+
+        Assert.Equal(package + ".tar.gz", installer?.Name);
+        Assert.Equal(package + "-SHA256SUMS.txt", checksums?.Name);
     }
 
     [Fact]
@@ -255,7 +277,7 @@ public class UpdateServiceTests
 
         Assert.True(await updates.RefreshAsync(announce: false));
 
-        Assert.Equal("Filee-9.9.10-win-Setup.exe", updates.Installer!.Name);
+        Assert.Equal("Filee-9.9.10" + UpdateService.PackageSuffix, updates.Installer!.Name);
         Assert.Equal("9.9.10", updates.LatestVersion);
         Assert.Equal(0, announced); // no second notice while updating
     }
@@ -269,6 +291,8 @@ public class UpdateServiceTests
             var json = $$"""
                 {"tag_name":"{{tag}}","assets":[
                   {"name":"Filee-{{version}}-win-Setup.exe","browser_download_url":"{{Base}}Filee-{{version}}-win-Setup.exe","size":1234},
+                  {"name":"Filee-{{version}}-osx-x64.tar.gz","browser_download_url":"{{Base}}Filee-{{version}}-osx-x64.tar.gz","size":1234},
+                  {"name":"Filee-{{version}}-osx-arm64.tar.gz","browser_download_url":"{{Base}}Filee-{{version}}-osx-arm64.tar.gz","size":1234},
                   {"name":"Filee-{{version}}-SHA256SUMS.txt","browser_download_url":"{{Base}}Filee-{{version}}-SHA256SUMS.txt","size":100}]}
                 """;
             return Task.FromResult(request.RequestUri!.AbsolutePath.EndsWith("/releases/latest", StringComparison.Ordinal)
