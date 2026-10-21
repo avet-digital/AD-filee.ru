@@ -71,6 +71,8 @@ To uninstall, drag Filee from Applications to the Trash. Settings and converted 
 
 [Make a donation](https://t.tb.ru/pm_short/3CFjjbcH8x0)
 
+<!-- sponsors: src/Filee.App/Assets/Sponsors/sponsors.json -->
+
 ## License
 
 Distributed under the [Avet Digital license agreement](LICENSE).
