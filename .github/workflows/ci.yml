@@ -4,7 +4,8 @@ name: CI
 # Changes to documentation only (Markdown, docs/) skip the build and tests.
 on:
   push:
-    branches: [main]
+    # ad/**: Avet Digital's working branches (AD-QS gate G2 builds and tests them).
+    branches: [main, 'ad/**']
     paths-ignore: ['**/*.md', 'docs/**']
   pull_request:
     paths-ignore: ['**/*.md', 'docs/**']
