@@ -4,3 +4,14 @@
 src/Filee.App/Services/Triggers/GestureDetector.cs:generic-api-key:74
 # Цитата той же строки в первой версии отчёта audit/SECURITY_REPORT.md (перефразирована в следующих коммитах).
 65122f9d63d67de9bcae744b74633147e435a705:audit/SECURITY_REPORT.md:generic-api-key:38
+# Filee 2.5.0 (G1 от 17.11.2026). Та же метка жеста мыши, в 2.5.0 — строка 81.
+src/Filee.App/Services/Triggers/GestureDetector.cs:generic-api-key:81
+# Аргументы ExifTool "-QuickTime:GPSCoordinates=" и т.п. (очистка геометок), не секрет.
+src/Filee.Engines/Metadata/ExifTool.cs:generic-api-key:107
+# Пример Sec-WebSocket-Key из RFC 6455 (base64 от "the sample nonce") в тесте.
+tests/Filee.App.Tests/FileeConnectTests.cs:generic-api-key:445
+# Придуманные тестовые значения 0123456789abcdef… в тестах обновления.
+tests/Filee.App.Tests/UpdateServiceTests.cs:generic-api-key:1081
+tests/Filee.App.Tests/UpdateServiceTests.cs:generic-api-key:1082
+tests/Filee.App.Tests/UpdateServiceTests.cs:generic-api-key:1083
+tests/Filee.App.Tests/UpdateServiceTests.cs:generic-api-key:1109
