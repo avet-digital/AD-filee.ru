@@ -717,6 +717,9 @@ public sealed class PresetGalleryTests : IDisposable
         Assert.True(button.Command!.CanExecute(null));
         var export = page.GetVisualDescendants().OfType<Button>().Single(b => b.Name == "GalleryExportButton");
         Assert.Equal(AppHost.Get<ILocalizer>()["gallery.export"], AutomationProperties.GetName(export));
+        // Avet Digital's build: the gallery is the upstream author's site, so both buttons are hidden.
+        Assert.False(button.IsVisible);
+        Assert.False(export.IsVisible);
         window.Close();
     }
 
