@@ -114,12 +114,14 @@ public class SetupStartTests
     [Fact]
     public void Every_language_says_the_download_is_incomplete()
     {
+        // Avet Digital's build: every language names our release page instead of the upstream site.
+        const string downloads = "github.com/avet-digital/AD-filee.ru";
         var english = new SetupTexts("en")["installer.error.incomplete"];
-        Assert.Contains("filee.sh", english);
+        Assert.Contains(downloads, english);
         Assert.All(SetupTexts.Languages, l =>
         {
             Assert.True(SetupTexts.Load(l.Code).TryGetValue("installer.error.incomplete", out var text), l.Code);
-            Assert.Contains("filee.sh", text);
+            Assert.Contains(downloads, text);
         });
     }
 
